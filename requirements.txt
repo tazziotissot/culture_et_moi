@@ -1,0 +1,9 @@
+pandas
+streamlit
+numpy
+streamlit-analytics2
+plotly
+streamlit-survey
+streamlit-authenticator
+openpyxl
+matplotlib
