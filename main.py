@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from utils import *
+from src.utils import *
 
 st.set_page_config(layout="wide", page_title="Culture & Moi")
 st.title("Culture & Moi")
