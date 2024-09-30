@@ -1,41 +1,69 @@
 import streamlit as st
+import streamlit_authenticator as stauth
 import pandas as pd
 from src.utils import *
+from src.dashboard import *
+from src.survey import *
+import yaml
+from yaml.loader import SafeLoader
+import datetime
 
 st.set_page_config(layout="wide", page_title="Culture & Moi")
 st.title("Culture & Moi")
 
-uploaded_file = st.file_uploader(
-    "Choose a file", accept_multiple_files=False, type=["xlsx", "csv"]
+with open("src/credentials.yaml") as file:
+    config = yaml.load(file, Loader=SafeLoader)
+stauth.Hasher.hash_passwords(config["credentials"])
+authenticator = stauth.Authenticate(
+    config["credentials"],
+    config["cookie"]["name"],
+    config["cookie"]["key"],
+    config["cookie"]["expiry_days"],
+    config["pre-authorized"],
 )
-if uploaded_file is not None:
-    df = import_data(uploaded_file)
-    questions, num_questions = extract_questions(df)
-    list_users = extract_users(df)
-    df = rescale_columns(df, num_questions)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.header("Questions")
-        select_question = st.multiselect("Questions", options=num_questions)
-        plot_questions = st.empty()
-        with plot_questions:
-            st.plotly_chart(plot_scores_questions(df, select_question, num_questions))
-    with col2:
-        st.header("People")
-        select_user = st.multiselect("Users", options=["All"] + list_users)
-        plot_users = st.empty()
-        with plot_users:
-            st.plotly_chart(plot_scores_users(df, select_user, num_questions))
-    col3, col4 = st.columns(2)
-    with col3:
-        st.header("Top 3 areas to develop")
-        plot_flop3 = st.empty()
-        with plot_flop3:
-            st.plotly_chart(plot_scores_top(df, num_questions, False))
-    with col4:
-        st.header("Top 3 strengths")
-        plot_top3 = st.empty()
-        with plot_top3:
-            st.plotly_chart(plot_scores_top(df, num_questions, True))
-    st.header("Indice Culture & Moi")
-    st.plotly_chart(score_treemap(df, [], num_questions))
+
+
+name, authentication_status, username = authenticator.login()
+if st.session_state["authentication_status"]:
+    authenticator.logout()
+    st.write(f'Welcome *{st.session_state["name"]}*!')
+    if username in ["mrabeman", "ttissot"]:
+        make_survey, launch_survey, dashboard, profile = st.tabs(
+            ["Create survey", "Launch survey", "Dashboard", "Profile"]
+        )
+        with make_survey:
+            # st.header("Import survey")
+            # survey_dict_pkl = st.file_uploader(
+            #     "Choose a file", accept_multiple_files=False, type=["pkl"]
+            # )
+            # if survey_dict_pkl is None:
+            #     survey_dict = {}
+            # else:
+            #     survey_dict = pkl.load(open(survey_dict_pkl.name, "rb"))
+            survey_dict = create_survey()
+            show_temporary_survey(survey_dict)
+            if st.button("Export survey"):
+                st.success(f"Saved at {datetime.datetime.now()}!")
+                pkl.dump(
+                    survey_dict, open(f"survey_{datetime.datetime.now()}.pkl", "wb")
+                )
+        with launch_survey:
+            st.header("TODO: List existing survey files, and pick the one to launch")
+        with dashboard:
+            main_dashboard()
+        with profile:
+            personal_details(authenticator, config)
+    else:
+        survey, profile = st.tabs(["Survey", "Profile"])
+        with survey:
+            survey_dict = make_dummy_survey()
+            result = show_survey(survey_dict, username)
+            st.json(result)
+        with profile:
+            personal_details(authenticator, config)
+elif st.session_state["authentication_status"] is False:
+    st.error("Username/password is incorrect")
+    sign_up(authenticator, config)
+elif st.session_state["authentication_status"] is None:
+    st.warning("Please enter your username and password")
+    sign_up(authenticator, config)
