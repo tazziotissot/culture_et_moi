@@ -1,9 +1,9 @@
 pandas
-streamlit
+streamlit==1.38.0
 numpy
-streamlit-analytics2
-plotly
-streamlit-survey
-streamlit-authenticator
+streamlit-analytics2==0.8.2
+plotly==5.24.1
+streamlit-survey==1.0.0
+streamlit-authenticator==0.3.3
 openpyxl
 matplotlib
